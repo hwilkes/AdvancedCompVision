@@ -1,6 +1,7 @@
 package b6;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -108,16 +109,33 @@ public class SiftSurfComparison {
 	}
 	
 	public void train(){
+		System.out.println("TRAINING");
 		dsift.trainImages(this.classes, this.trainingImages);
-		
+		System.out.println("TRAINED");
 	}
 	
 	public void test(){
+		System.out.println("TESTING");
 		List<ClassificationResult<String>> results = new ArrayList<ClassificationResult<String>>();
 		
 		for(FImage testImage : this.testImages){
 			results.add(dsift.classify(testImage));
 		}
 		System.out.println(results.size());
+		String output = "";
+		for(ClassificationResult<String> cs : results){
+			output = output + cs.toString() +"\n";
+		}
+		
+		try {
+			File file = new File("output.txt");
+			FileWriter fileWriter = new FileWriter(file);
+			fileWriter.write(output);
+			fileWriter.flush();
+			fileWriter.close();
+			System.out.println("OUTPUT CREATED");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
