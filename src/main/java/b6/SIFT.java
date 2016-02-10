@@ -60,8 +60,6 @@ public class SIFT {
 		this.classes = classes;
 		GroupedDataset<String,ListDataset<FImage>,FImage> dataset = new MapBackedDataset<String,ListDataset<FImage>,FImage>();
 		
-	
-		
 		for(Entry<String,FImage[]> e : images.entrySet()){
 			ListDataset<FImage> listdata = new ListBackedDataset<FImage>();
 			for(FImage f : e.getValue()){
@@ -69,36 +67,43 @@ public class SIFT {
 			}	
 			dataset.put(e.getKey(), listdata);
 		}
-		
+		System.out.println("Grouped Dataset created");
 		Set<ByteFV> vectors = new HashSet<ByteFV>();
 
 		
 		List<LocalFeatureList<ByteDSIFTKeypoint>> featurevectors = new ArrayList<LocalFeatureList<ByteDSIFTKeypoint>>();
-		
+		DenseSIFT sifter = new DenseSIFT(16,16);
 		for(Entry<String,FImage[]> e : images.entrySet()){
-			DenseSIFT sifter = new DenseSIFT(16,16);
-			
+			System.out.println("Training class: "+e.getKey());
+			int num = 0;
 			for(FImage f : e.getValue()){
 				sifter.analyseImage(f);
 				LocalFeatureList<ByteDSIFTKeypoint> featurePoints = sifter.getByteKeypoints();
-			
 				featurevectors.add(featurePoints);
+				for(ByteDSIFTKeypoint point : featurePoints){
+					vectors.add(point.getFeatureVector());
+				}
+				num++;
+				if(num == 5){
+					break;
+				}
 			}
 		}
 		
-		int means = 500;
+		int k = 500;
 		
-		ByteKMeans km = ByteKMeans.createKDTreeEnsemble(means);
-		DataSource<byte[]> datasource = new LocalFeatureListDataSource<ByteDSIFTKeypoint, byte[]>(featurevectors);
-		clusters = km.cluster(datasource);
-		HardAssigner<byte[], float[], IntFloatPair> assigner = clusters.defaultHardAssigner();
+		KMeansByteFV kmeans = new KMeansByteFV();
+		Set<ByteFV> vocabulary = new KMeansByteFV().getMeans(k, vectors);
+		kmeans.getMeans(k, vocabulary);
 		
 		DenseSIFT dsift = new DenseSIFT(5, 7);
-		PyramidDenseSIFT<FImage> pdsift = new PyramidDenseSIFT<FImage>(dsift, 6f, 7);
-		FeatureExtractor<DoubleFV, FImage> extractor = new PHOWExtractor(pdsift, assigner);
-		
+		//PyramidDenseSIFT<FImage> pdsift = new PyramidDenseSIFT<FImage>(dsift, 6f, 7);
+		ByteFV[] array = new ByteFV[vocabulary.size()];
+		FeatureExtractor<DoubleFV, FImage> extractor = new BOVWExtractorByte(Arrays.asList(vocabulary.toArray(array)),engine);
+//		
 		ann = new LiblinearAnnotator<FImage, String>(
 	            extractor, Mode.MULTICLASS, SolverType.L2R_L2LOSS_SVC, 1.0, 0.00001);
+		System.out.println("Training liblinearannotator");
 		ann.train(dataset);
 		trained = true;
 	}
@@ -112,26 +117,5 @@ public class SIFT {
 		}
 	}
 	
-	static class PHOWExtractor implements FeatureExtractor<DoubleFV, FImage> {
-	    PyramidDenseSIFT<FImage> pdsift;
-	    HardAssigner<byte[], float[], IntFloatPair> assigner;
-
-	    public PHOWExtractor(PyramidDenseSIFT<FImage> pdsift, HardAssigner<byte[], float[], IntFloatPair> assigner)
-	    {
-	        this.pdsift = pdsift;
-	        this.assigner = assigner;
-	    }
-
-	    public DoubleFV extractFeature(FImage object) {
-	        FImage image = object.getImage();
-	        pdsift.analyseImage(image);
-
-	        BagOfVisualWords<byte[]> bovw = new BagOfVisualWords<byte[]>(assigner);
-
-	        BlockSpatialAggregator<byte[], SparseIntFV> spatial = new BlockSpatialAggregator<byte[], SparseIntFV>(
-	                bovw, 2, 2);
-
-	        return spatial.aggregate(pdsift.getByteKeypoints(0.015f), image.getBounds()).normaliseFV();
-	    }
-	}
+	
 }

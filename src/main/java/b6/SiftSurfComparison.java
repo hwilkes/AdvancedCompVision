@@ -67,12 +67,12 @@ public class SiftSurfComparison {
 		System.out.println(trainingdir.getAbsolutePath());
 		File[] classes = trainingdir.listFiles();
 		
-		for(File fi : testingdir.listFiles()){
-			System.out.println(fi.getAbsolutePath());
-			FImage toAdd = ImageUtilities.readF(fi); 
-			ti.add(toAdd);
-			
-		}
+//		for(File fi : testingdir.listFiles()){
+//			System.out.println(fi.getAbsolutePath());
+//			FImage toAdd = ImageUtilities.readF(fi); 
+//			ti.add(toAdd);
+//			
+//		}
 		
 		int numImages = 0;
 		
@@ -93,7 +93,10 @@ public class SiftSurfComparison {
 				FImage[] images = new FImage[imageFiles.length];
 				
 				for(int i = 0; i < imageFiles.length; i++){
-					images[i] = ImageUtilities.readF(imageFiles[i]); 
+					if(imageFiles[i].getName().endsWith(".jpg"))
+					{
+						images[i] = ImageUtilities.readF(imageFiles[i]); 
+					}
 				}
 				
 				String c = f.getName();
