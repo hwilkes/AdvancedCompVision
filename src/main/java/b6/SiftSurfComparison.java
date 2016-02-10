@@ -5,12 +5,19 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
+import org.openimaj.experiment.evaluation.classification.ClassificationResult;
+import org.openimaj.feature.ByteFV;
+import org.openimaj.feature.local.list.LocalFeatureList;
 import org.openimaj.image.FImage;
 import org.openimaj.image.ImageUtilities;
+import org.openimaj.image.feature.dense.gradient.dsift.ByteDSIFTKeypoint;
+import org.openimaj.image.feature.dense.gradient.dsift.DenseSIFT;
 import org.openimaj.ml.annotation.Annotated;
 import org.openimaj.ml.annotation.AnnotatedObject;
 
@@ -20,6 +27,10 @@ public class SiftSurfComparison {
 	public static void main(String args[]){
 		try {
 			SiftSurfComparison ssc = new SiftSurfComparison();
+			
+			ssc.train();
+			ssc.test();
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -27,29 +38,40 @@ public class SiftSurfComparison {
 	}
 	
 	//TODO better file organisation
-	private final String imageDir = "images/training/";
+	private final String imageTrainingDir = "images/training/";
+	private final String imageTestingDir = "images/testing/";
 	
 	private final float traningToTestRatio = 0.8f;
 	
 	private FImage[] testImages;
-	private List<Annotated<FImage,String>> trainingImages;
+	private Map<String,FImage[]> trainingImages;
 	
 	private String[] classes;
 	
 	private Random r;
 	
+	SIFT dsift;
+	
 	public SiftSurfComparison() throws IOException{
+		dsift = new SIFT();
+		
 		List<String> cls = new ArrayList<String>();
 		List<FImage> ti = new ArrayList<FImage>();
 		
 		r = new Random();
-		trainingImages = new ArrayList<Annotated<FImage,String>>();
+		trainingImages = new HashMap<String,FImage[]>();
 		
-		File dir = new File(imageDir);
+		File trainingdir = new File(imageTrainingDir);
+		File testingdir = new File(imageTestingDir);
+		System.out.println(trainingdir.getAbsolutePath());
+		File[] classes = trainingdir.listFiles();
 		
-		File[] classes = dir.listFiles();
-		
-		
+		for(File fi : testingdir.listFiles()){
+			System.out.println(fi.getAbsolutePath());
+			FImage toAdd = ImageUtilities.readF(fi); 
+			ti.add(toAdd);
+			
+		}
 		
 		int numImages = 0;
 		
@@ -75,13 +97,7 @@ public class SiftSurfComparison {
 				
 				String c = f.getName();
 				for(FImage i : images){
-					if(testNum != 0 && r.nextBoolean()){
-						ti.add(i);
-						testNum--;
-					}
-					else{
-						trainingImages.add(new AnnotatedObject<FImage,String>(i,c));
-					}
+					trainingImages.put(c, images);
 				}
 			}
 		}
@@ -92,6 +108,16 @@ public class SiftSurfComparison {
 	}
 	
 	public void train(){
-
+		dsift.trainImages(this.classes, this.trainingImages);
+		
+	}
+	
+	public void test(){
+		List<ClassificationResult<String>> results = new ArrayList<ClassificationResult<String>>();
+		
+		for(FImage testImage : this.testImages){
+			results.add(dsift.classify(testImage));
+		}
+		System.out.println(results.size());
 	}
 }
