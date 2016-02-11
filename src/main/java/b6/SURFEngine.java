@@ -49,15 +49,15 @@ public class SURFEngine implements Engine<Keypoint,FImage> {
 		fd.detect(matimage, output);
 
 		LocalFeatureList<Keypoint> toReturn = new MemoryLocalFeatureList<Keypoint>();
-		org.opencv.core.KeyPoint[] matkeys = output.toArray();
+		org.opencv.features2d.KeyPoint[] matkeys = output.toArray();
 		
-		for(org.opencv.core.KeyPoint k : matkeys){
+		for(org.opencv.features2d.KeyPoint k : matkeys){
 			Keypoint toAdd = new Keypoint();
 			toAdd.x = (float) k.pt.x;
 			toAdd.y = (float) k.pt.y;
 			toAdd.scale = k.size;
 			toAdd.ori = k.angle;
-			
+			toAdd.ivec = new byte[128];
 			toReturn.add(toAdd);
 		}
 		

@@ -42,18 +42,20 @@ import org.openimaj.util.pair.IntFloatPair;
 import de.bwaldvogel.liblinear.SolverType;
 
 
-public class SIFT {
-	DoGSIFTEngine engine;
-	//SURFEngine engine;
+public class SIFTAndSURF {
+	DoGSIFTEngine siftengine;
+	SURFEngine surfengine;
 	private String[] classes;
 	private boolean trained = false;
 	private ByteCentroidsResult clusters;
-	private LiblinearAnnotator<FImage, String> ann;
+	
+	private LiblinearAnnotator<FImage, String> siftann;
+	private LiblinearAnnotator<FImage, String> surfann;
 	
 	
-	public SIFT(){
-		engine = new DoGSIFTEngine();	
-		//engine = new SURFEngine();	
+	public SIFTAndSURF(){
+		siftengine = new DoGSIFTEngine();	
+		surfengine = new SURFEngine();	
 	}
 	/*
 	 * Makes some use of code snippets from http://www.openimaj.org/tutorial/classification101.html
@@ -70,10 +72,11 @@ public class SIFT {
 			dataset.put(e.getKey(), listdata);
 		}
 		System.out.println("Grouped Dataset created");
-		Set<ByteFV> vectors = new HashSet<ByteFV>();
-
+		Set<ByteFV> vectorssift = new HashSet<ByteFV>();
+		Set<ByteFV> vectorssurf = new HashSet<ByteFV>();
 		
-		List<LocalFeatureList<Keypoint>> featurevectors = new ArrayList<LocalFeatureList<Keypoint>>();
+		List<LocalFeatureList<Keypoint>> featurevectorsone = new ArrayList<LocalFeatureList<Keypoint>>();
+		List<LocalFeatureList<Keypoint>> featurevectorstwo = new ArrayList<LocalFeatureList<Keypoint>>();
 		//DenseSIFT sifter = new DenseSIFT(16,16);
 		
 		for(Entry<String,FImage[]> e : images.entrySet()){
@@ -82,10 +85,16 @@ public class SIFT {
 			for(FImage f : e.getValue()){
 				//engine.analyseImage(f);
 				//LocalFeatureList<ByteDSIFTKeypoint> featurePoints = sifter.getByteKeypoints();
-				LocalFeatureList<Keypoint> featurePoints = engine.findFeatures(f);
-				featurevectors.add(featurePoints);
-				for(Keypoint point : featurePoints){
-					vectors.add(point.getFeatureVector());
+				LocalFeatureList<Keypoint> featurePoints1 = siftengine.findFeatures(f);
+				featurevectorsone.add(featurePoints1);
+				for(Keypoint point : featurePoints1){
+					vectorssift.add(point.getFeatureVector());
+				}
+				
+				LocalFeatureList<Keypoint> featurePoints2 = siftengine.findFeatures(f);
+				featurevectorstwo.add(featurePoints2);
+				for(Keypoint point : featurePoints2){
+					vectorssurf.add(point.getFeatureVector());
 				}
 //				num++;
 //				if(num == 3){
@@ -97,29 +106,50 @@ public class SIFT {
 		int k = 500;
 		
 		KMeansByteFV kmeans = new KMeansByteFV();
-		Set<ByteFV> vocabulary = new KMeansByteFV().getMeans(k, vectors);
+		Set<ByteFV> vocabulary = new KMeansByteFV().getMeans(k, vectorssift);
 		kmeans.getMeans(k, vocabulary);
 		
 		//DenseSIFT dsift = new DenseSIFT(5, 7);
 		//PyramidDenseSIFT<FImage> pdsift = new PyramidDenseSIFT<FImage>(dsift, 6f, 7);
 		ByteFV[] array = new ByteFV[vocabulary.size()];
-		FeatureExtractor<SparseIntFV, FImage> extractor = new BOVWExtractorByte(Arrays.asList(vocabulary.toArray(array)),engine);
+		FeatureExtractor<SparseIntFV, FImage> extractor = new BOVWExtractorByte(Arrays.asList(vocabulary.toArray(array)),siftengine);
 
-		ann = new LiblinearAnnotator<FImage, String>(
+		siftann = new LiblinearAnnotator<FImage, String>(
 	            extractor, Mode.MULTICLASS, SolverType.L2R_L2LOSS_SVC, 1.0, 0.00001);
-		System.out.println("Training liblinearannotator");
-		ann.train(dataset);
+		System.out.println("Training liblinearannotator for sft");
+		siftann.train(dataset);
+		
+		KMeansByteFV kmeanssurf = new KMeansByteFV();
+		Set<ByteFV> vocabularysurf = new KMeansByteFV().getMeans(k, vectorssurf);
+		kmeanssurf.getMeans(k, vocabulary);
+		
+		//DenseSIFT dsift = new DenseSIFT(5, 7);
+		//PyramidDenseSIFT<FImage> pdsift = new PyramidDenseSIFT<FImage>(dsift, 6f, 7);
+		ByteFV[] arraysurf = new ByteFV[vocabularysurf.size()];
+		FeatureExtractor<SparseIntFV, FImage> extractorsurf = new BOVWExtractorByte(Arrays.asList(vocabularysurf.toArray(arraysurf)),surfengine);
+
+		siftann = new LiblinearAnnotator<FImage, String>(
+				extractorsurf, Mode.MULTICLASS, SolverType.L2R_L2LOSS_SVC, 1.0, 0.00001);
+		System.out.println("Training liblinearannotator for surf");
+		siftann.train(dataset);
 		trained = true;
 	}
 	
-	public List<ScoredAnnotation<String>> classify(FImage image){
+	public List<ScoredAnnotation<String>> classifySIFT(FImage image){
 		if(trained){			
-			return ann.annotate(image);
+			return siftann.annotate(image);
 					}
 		else{
 			return null;
 		}
 	}
 	
-	
+	public List<ScoredAnnotation<String>> classifySURF(FImage image){
+		if(trained){			
+			return siftann.annotate(image);
+					}
+		else{
+			return null;
+		}
+	}
 }

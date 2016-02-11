@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.opencv.core.Core;
 import org.openimaj.experiment.evaluation.classification.ClassificationResult;
 import org.openimaj.feature.ByteFV;
 import org.openimaj.feature.local.list.LocalFeatureList;
@@ -27,6 +28,8 @@ import org.openimaj.ml.annotation.ScoredAnnotation;
 public class SiftSurfComparison {
 	
 	public static void main(String args[]){
+		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
+		
 		try {
 			SiftSurfComparison ssc = new SiftSurfComparison();
 			
@@ -52,10 +55,10 @@ public class SiftSurfComparison {
 	
 	private Random r;
 	
-	SIFT dsift;
+	SIFTAndSURF dsift;
 	
 	public SiftSurfComparison() throws IOException{
-		dsift = new SIFT();
+		dsift = new SIFTAndSURF();
 		
 		List<String> cls = new ArrayList<String>();
 		List<FImage> ti = new ArrayList<FImage>();
@@ -120,12 +123,16 @@ public class SiftSurfComparison {
 	
 	public void test(){
 		System.out.println("TESTING");
-		List<List<ScoredAnnotation<String>>> results = new ArrayList<List<ScoredAnnotation<String>>>();
+		List<List<ScoredAnnotation<String>>> resultssift = new ArrayList<List<ScoredAnnotation<String>>>();
+		List<List<ScoredAnnotation<String>>> resultssurf = new ArrayList<List<ScoredAnnotation<String>>>();
+
 		int breakpoint = 0;
 		for(FImage testImage : this.testImages){
-			List<ScoredAnnotation<String>> annotations = dsift.classify(testImage);
+			List<ScoredAnnotation<String>> siftannotations = dsift.classifySIFT(testImage);
+			List<ScoredAnnotation<String>> surfannotations = dsift.classifySIFT(testImage);
 			System.out.println("Classifying "+testImage.toString());
-			results.add(annotations);
+			resultssift.add(siftannotations);
+			resultssurf.add(surfannotations);
 //			if(breakpoint == 100){
 //				break;
 //			}
@@ -133,25 +140,50 @@ public class SiftSurfComparison {
 //				breakpoint++;
 //			}
 		}
-		System.out.println(results.size());
-		String output = "";
+		System.out.println(resultssift.size());
+		String outputone = "";
 		int imageNum = 0;
-		for(List<ScoredAnnotation<String>> cs : results){
-			output = output + imageNum + ".jpg , ";
+		for(List<ScoredAnnotation<String>> cs : resultssift){
+			outputone = outputone + imageNum + ".jpg , ";
 			for(ScoredAnnotation<String> anno : cs){
 				
-				output = output + anno.annotation+" , "+anno.confidence+" , ";
+				outputone = outputone + anno.annotation+" , "+anno.confidence+" , ";
 			}
-			output = output.substring(0, output.length()-3);
+			outputone = outputone.substring(0, outputone.length()-3);
 			
-			output = output+"\n";
+			outputone = outputone+"\n";
 			imageNum++;
 		}
 		
 		try {
-			File file = new File("output.txt");
+			File file = new File("sift_output.txt");
 			FileWriter fileWriter = new FileWriter(file);
-			fileWriter.write(output);
+			fileWriter.write(outputone);
+			fileWriter.flush();
+			fileWriter.close();
+			System.out.println("OUTPUT CREATED");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		String outputtwo = "";
+		int imageNumsurf = 0;
+		for(List<ScoredAnnotation<String>> cs : resultssurf){
+			outputtwo = outputtwo + imageNumsurf + ".jpg , ";
+			for(ScoredAnnotation<String> anno : cs){
+				
+				outputtwo = outputtwo + anno.annotation+" , "+anno.confidence+" , ";
+			}
+			outputtwo = outputtwo.substring(0, outputtwo.length()-3);
+			
+			outputtwo = outputtwo+"\n";
+			imageNumsurf++;
+		}
+		
+		try {
+			File file = new File("surf_output.txt");
+			FileWriter fileWriter = new FileWriter(file);
+			fileWriter.write(outputtwo);
 			fileWriter.flush();
 			fileWriter.close();
 			System.out.println("OUTPUT CREATED");
