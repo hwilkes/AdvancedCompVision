@@ -21,6 +21,7 @@ import org.openimaj.image.feature.dense.gradient.dsift.ByteDSIFTKeypoint;
 import org.openimaj.image.feature.dense.gradient.dsift.DenseSIFT;
 import org.openimaj.ml.annotation.Annotated;
 import org.openimaj.ml.annotation.AnnotatedObject;
+import org.openimaj.ml.annotation.ScoredAnnotation;
 
 
 public class SiftSurfComparison {
@@ -67,12 +68,12 @@ public class SiftSurfComparison {
 		System.out.println(trainingdir.getAbsolutePath());
 		File[] classes = trainingdir.listFiles();
 		
-//		for(File fi : testingdir.listFiles()){
-//			System.out.println(fi.getAbsolutePath());
-//			FImage toAdd = ImageUtilities.readF(fi); 
-//			ti.add(toAdd);
-//			
-//		}
+		for(File fi : testingdir.listFiles()){
+			System.out.println(fi.getAbsolutePath());
+			FImage toAdd = ImageUtilities.readF(fi); 
+			ti.add(toAdd);
+			
+		}
 		
 		int numImages = 0;
 		
@@ -119,15 +120,32 @@ public class SiftSurfComparison {
 	
 	public void test(){
 		System.out.println("TESTING");
-		List<ClassificationResult<String>> results = new ArrayList<ClassificationResult<String>>();
-		
+		List<List<ScoredAnnotation<String>>> results = new ArrayList<List<ScoredAnnotation<String>>>();
+		int breakpoint = 0;
 		for(FImage testImage : this.testImages){
-			results.add(dsift.classify(testImage));
+			List<ScoredAnnotation<String>> annotations = dsift.classify(testImage);
+			System.out.println("Classifying "+testImage.toString());
+			results.add(annotations);
+//			if(breakpoint == 100){
+//				break;
+//			}
+//			else{
+//				breakpoint++;
+//			}
 		}
 		System.out.println(results.size());
 		String output = "";
-		for(ClassificationResult<String> cs : results){
-			output = output + cs.toString() +"\n";
+		int imageNum = 0;
+		for(List<ScoredAnnotation<String>> cs : results){
+			output = output + imageNum + ".jpg , ";
+			for(ScoredAnnotation<String> anno : cs){
+				
+				output = output + anno.annotation+" , "+anno.confidence+" , ";
+			}
+			output = output.substring(0, output.length()-3);
+			
+			output = output+"\n";
+			imageNum++;
 		}
 		
 		try {

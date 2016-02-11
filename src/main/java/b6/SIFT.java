@@ -31,6 +31,7 @@ import org.openimaj.image.feature.local.aggregate.BlockSpatialAggregator;
 import org.openimaj.image.feature.local.aggregate.VectorAggregator;
 import org.openimaj.image.feature.local.engine.DoGSIFTEngine;
 import org.openimaj.image.feature.local.keypoints.Keypoint;
+import org.openimaj.ml.annotation.ScoredAnnotation;
 import org.openimaj.ml.annotation.linear.LiblinearAnnotator;
 import org.openimaj.ml.annotation.linear.LiblinearAnnotator.Mode;
 import org.openimaj.ml.clustering.ByteCentroidsResult;
@@ -43,7 +44,7 @@ import de.bwaldvogel.liblinear.SolverType;
 
 public class SIFT {
 	DoGSIFTEngine engine;
-	
+	//SURFEngine engine;
 	private String[] classes;
 	private boolean trained = false;
 	private ByteCentroidsResult clusters;
@@ -52,6 +53,7 @@ public class SIFT {
 	
 	public SIFT(){
 		engine = new DoGSIFTEngine();	
+		//engine = new SURFEngine();	
 	}
 	/*
 	 * Makes some use of code snippets from http://www.openimaj.org/tutorial/classification101.html
@@ -71,22 +73,24 @@ public class SIFT {
 		Set<ByteFV> vectors = new HashSet<ByteFV>();
 
 		
-		List<LocalFeatureList<ByteDSIFTKeypoint>> featurevectors = new ArrayList<LocalFeatureList<ByteDSIFTKeypoint>>();
-		DenseSIFT sifter = new DenseSIFT(16,16);
+		List<LocalFeatureList<Keypoint>> featurevectors = new ArrayList<LocalFeatureList<Keypoint>>();
+		//DenseSIFT sifter = new DenseSIFT(16,16);
+		
 		for(Entry<String,FImage[]> e : images.entrySet()){
 			System.out.println("Training class: "+e.getKey());
 			int num = 0;
 			for(FImage f : e.getValue()){
-				sifter.analyseImage(f);
-				LocalFeatureList<ByteDSIFTKeypoint> featurePoints = sifter.getByteKeypoints();
+				//engine.analyseImage(f);
+				//LocalFeatureList<ByteDSIFTKeypoint> featurePoints = sifter.getByteKeypoints();
+				LocalFeatureList<Keypoint> featurePoints = engine.findFeatures(f);
 				featurevectors.add(featurePoints);
-				for(ByteDSIFTKeypoint point : featurePoints){
+				for(Keypoint point : featurePoints){
 					vectors.add(point.getFeatureVector());
 				}
-				num++;
-				if(num == 5){
-					break;
-				}
+//				num++;
+//				if(num == 3){
+//					break;
+//				}
 			}
 		}
 		
@@ -96,11 +100,11 @@ public class SIFT {
 		Set<ByteFV> vocabulary = new KMeansByteFV().getMeans(k, vectors);
 		kmeans.getMeans(k, vocabulary);
 		
-		DenseSIFT dsift = new DenseSIFT(5, 7);
+		//DenseSIFT dsift = new DenseSIFT(5, 7);
 		//PyramidDenseSIFT<FImage> pdsift = new PyramidDenseSIFT<FImage>(dsift, 6f, 7);
 		ByteFV[] array = new ByteFV[vocabulary.size()];
-		FeatureExtractor<DoubleFV, FImage> extractor = new BOVWExtractorByte(Arrays.asList(vocabulary.toArray(array)),engine);
-//		
+		FeatureExtractor<SparseIntFV, FImage> extractor = new BOVWExtractorByte(Arrays.asList(vocabulary.toArray(array)),engine);
+
 		ann = new LiblinearAnnotator<FImage, String>(
 	            extractor, Mode.MULTICLASS, SolverType.L2R_L2LOSS_SVC, 1.0, 0.00001);
 		System.out.println("Training liblinearannotator");
@@ -108,10 +112,10 @@ public class SIFT {
 		trained = true;
 	}
 	
-	public ClassificationResult<String> classify(FImage image){
+	public List<ScoredAnnotation<String>> classify(FImage image){
 		if(trained){			
-			return ann.classify(image);
-		}
+			return ann.annotate(image);
+					}
 		else{
 			return null;
 		}

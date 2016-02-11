@@ -10,16 +10,17 @@ import org.openimaj.image.FImage;
 import org.openimaj.image.feature.dense.gradient.dsift.AbstractDenseSIFT;
 import org.openimaj.image.feature.dense.gradient.dsift.ByteDSIFTKeypoint;
 import org.openimaj.image.feature.local.engine.Engine;
+import org.openimaj.image.feature.local.keypoints.Keypoint;
 
 
 
-public class BOVWExtractorByte<SIFT extends AbstractDenseSIFT<FImage>> implements BOVWExtractor<SparseIntFV> {
+public class BOVWExtractorByte implements BOVWExtractor<SparseIntFV> {
 
 	List<ByteFV> dictionary;
-	Engine<ByteDSIFTKeypoint,FImage> method;
+	Engine<Keypoint,FImage> method;
 	//SIFT method;
 	
-	public BOVWExtractorByte(List<ByteFV> dictionary, Engine<ByteDSIFTKeypoint,FImage> method)
+	public BOVWExtractorByte(List<ByteFV> dictionary, Engine<Keypoint,FImage> method)
 	{
 		this.dictionary = dictionary;
 		this.method = method;
@@ -33,9 +34,10 @@ public class BOVWExtractorByte<SIFT extends AbstractDenseSIFT<FImage>> implement
 		}
 		
 		//method.analyseImage(object);
-		LocalFeatureList<ByteDSIFTKeypoint> keypoints  = method.findFeatures(object);
-		for(ByteDSIFTKeypoint keypoint: keypoints)
+		LocalFeatureList<Keypoint> keypoints  = method.findFeatures(object);
+		for(Keypoint keypoint: keypoints)
 		{
+			
 			ByteFV vector = keypoint.getFeatureVector();
 
 			ByteFV nearestWord = null;
